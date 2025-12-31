@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api_v1.products import crud
 from api_v1.products.schemas import Product, ProductCreate
 from core.models import db_helper
+from api_v1.products.dependencies import product_by_id
 
 
 router = APIRouter(tags=["Products"])
@@ -23,15 +24,11 @@ async def create_product(
 
 @router.get("/{product_id}/", response_model=Product)
 async def get_product(
-    product_id: int,
-    session: AsyncSession = Depends(db_helper.scope_session_dependency),
+    product: Product = Depends(product_by_id)
     ):
-    product = await crud.get_product(session=session, product_id=product_id)
-    if product is not None:
-        return product
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Product {product_id} not found ",
-    )
+    return product
 
 
+@router.put("/{product_id}/")
+async def update_product():
+    pass
