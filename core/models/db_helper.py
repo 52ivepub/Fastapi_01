@@ -30,7 +30,7 @@ class DatabaseHelper:
         )
         return session
     
-    async def scope_session_dependency(self) -> AsyncSession: # type: ignore
+    async def session_dependency(self) -> AsyncSession: # type: ignore
         async with self.session_factory() as session:
             yield session
             await session.close()
