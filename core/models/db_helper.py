@@ -29,6 +29,7 @@ class DatabaseHelper:
             scopefunc=current_task,
         )
         return session
+        
     
     async def session_dependency(self) -> AsyncSession: # type: ignore
         async with self.session_factory() as session:
@@ -42,6 +43,6 @@ class DatabaseHelper:
 
 
 db_helper = DatabaseHelper(
-    url=settings.db_url,
-    echo=settings.db_echo,
+    url=settings.db.url,
+    echo=settings.db.echo,
 )
