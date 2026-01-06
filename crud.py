@@ -1,8 +1,13 @@
 import asyncio
+from typing import TYPE_CHECKING
 from sqlalchemy import Result, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.models import db_helper, User, Profile, Post
+from sqlalchemy.orm import joinedload
+from core.models import db_helper, User, Profile, Post, user
 
+
+if TYPE_CHECKING:
+    from core.models.user import User
 
 async def create_user(session: AsyncSession, username: str) -> User:
     user = User(username=username)
@@ -37,25 +42,62 @@ async def create_user_profile(
     return profile
 
 
+async def show_users_with_prodiles(session: AsyncSession) -> list[User]:
+    stmt = select(User).options(joinedload(User.profile)).order_by(User.id)
+    # result: Result = await session.execute(stmt)
+    # users = result.scalars()
+    users = await session.scalars(stmt)
+    for user in users:
+        print(user)
+        print(user.profile)
+
+async def create_posts(
+        session: AsyncSession,
+        user_id: int,
+        *posts_titles: str
+        ) -> list[Post]:
+    posts = [
+        Post(title=title, user_id=user_id)
+        for title in posts_titles
+    ]
+    session.add_all(posts)
+    await session.commit()
+    print(posts)
+    return posts
+
 async def main():
     async with db_helper.session_factory() as session:
         # await create_user(session=session, username="john")
-        # await create_user(session=session, username="sam")
+        await create_user(session=session, username="alice")
         user_sam = await get_user_by_username(session=session, username="sam")
         user_john = await get_user_by_username(session=session, username="john")
-        # user_bob = await get_user_by_username(session=session, username="bob")
-        await create_user_profile(
-            session=session,
-            user_id=user_john.id,
-            first_name="john",
-        )
-        await create_user_profile(
-            session=session,
-            user_id=user_sam.id,
-            first_name="sam",
-            last_name="White"
-        )
-        await session.close()
+        # # user_bob = await get_user_by_username(session=session, username="bob")
+        # await create_user_profile(
+        #     session=session,
+        #     user_id=user_john.id,
+        #     first_name="john",
+        # )
+        # await create_user_profile(
+        #     session=session,
+        #     user_id=user_sam.id,
+        #     first_name="sam",
+        #     last_name="White"
+        # )
+        await show_users_with_prodiles(session=session)
+        await create_posts(
+            session,
+            user_john.id,
+            "SQLA 2.0",
+            "SQLA Joins", 
+            )
+        await create_posts(
+            session,
+            user_sam.id,
+            "FastAPI intro",
+            "FastAPI Advanced", 
+            "FastAPI more", 
+            )
+
 
 
 if __name__ == "__main__":
