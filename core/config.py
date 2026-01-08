@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class DbSettings(BaseModel):
     url: str = "sqlite+aiosqlite:///./db.sqlite3"
-    echo: bool = False
+    echo: bool = True
 
 class Setting(BaseSettings):
     api_v1_prefix: str = "/api/v1"
