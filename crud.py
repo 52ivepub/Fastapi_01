@@ -103,13 +103,26 @@ async def get_users_with_posts_and_profiles(
             print("-", post)
 
 
-async def get_posts_with(session: AsyncSession):
+async def get_posts_with_authors(session: AsyncSession):
     stmt = select(Post).options(joinedload(Post.user)).order_by(Post.id)
     posts = await session.scalars(stmt)
     for post in posts:
         print("post", post)
         print("author", post.user)
 
+
+async def get_profiles_with_users_and_users_with_posts(session: AsyncSession):
+    stmt = (
+        select(Profile)
+        .join(Profile.user)
+        .options(joinedload(Profile.user).selectinload(User.posts))
+        .where(User.username == "john")
+        .order_by(Profile.id)
+    )
+    profiles = await session.scalars(stmt)
+    for profile in profiles:
+        print(profile.first_name, profile.user)
+        print(profile.user.posts)
 
 
 async def main():
@@ -146,7 +159,7 @@ async def main():
         #     )
         # await get_users_with_posts(session=session)
         # await get_posts_with(session=session)
-        await get_users_with_posts_and_profiles(session=session)
+        await get_profiles_with_users_and_users_with_posts(session=session)
 
 
 if __name__ == "__main__":
