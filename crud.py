@@ -125,8 +125,16 @@ async def get_profiles_with_users_and_users_with_posts(session: AsyncSession):
         print(profile.user.posts)
 
 
+async def main_relations(session: AsyncSession):
+    pass
+
+async def demo_m2m(session: AsyncSession):
+    pass
+
 async def main():
     async with db_helper.session_factory() as session:
+        # await main_relations(session=session)
+        await demo_m2m(session=session)
         # await create_user(session=session, username="john")
         # await create_user(session=session, username="alice")
         # user_sam = await get_user_by_username(session=session, username="sam")
@@ -159,7 +167,8 @@ async def main():
         #     )
         # await get_users_with_posts(session=session)
         # await get_posts_with(session=session)
-        await get_profiles_with_users_and_users_with_posts(session=session)
+        # await get_profiles_with_users_and_users_with_posts(session=session)
+        
 
 
 if __name__ == "__main__":
