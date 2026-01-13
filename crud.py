@@ -9,6 +9,7 @@ from core.models import db_helper, User, Profile, Post, user, Order, Product
 if TYPE_CHECKING:
     from core.models.user import User
 
+
 async def create_user(session: AsyncSession, username: str) -> User:
     user = User(username=username)
     session.add(user)
@@ -51,15 +52,11 @@ async def show_users_with_prodiles(session: AsyncSession) -> list[User]:
         print(user)
         print(user.profile)
 
+
 async def create_posts(
-        session: AsyncSession,
-        user_id: int,
-        *posts_titles: str
-        ) -> list[Post]:
-    posts = [
-        Post(title=title, user_id=user_id)
-        for title in posts_titles
-    ]
+    session: AsyncSession, user_id: int, *posts_titles: str
+) -> list[Post]:
+    posts = [Post(title=title, user_id=user_id) for title in posts_titles]
     session.add_all(posts)
     await session.commit()
     print(posts)
@@ -67,8 +64,8 @@ async def create_posts(
 
 
 async def get_users_with_posts(
-        session: AsyncSession,
-    ):
+    session: AsyncSession,
+):
     # stmt = select(User).options(joinedload(User.posts)).order_by(User.id)
     stmt = select(User).options(selectinload(User.posts)).order_by(User.id)
     # users = await session.scalars(stmt)
@@ -78,18 +75,21 @@ async def get_users_with_posts(
     # for user in users.unique():
     users = await session.scalars(stmt)
     for user in users:
-        print("**"*10)
+        print("**" * 10)
         print(user)
         for post in user.posts:
             print("-", post)
 
 
 async def get_users_with_posts_and_profiles(
-        session: AsyncSession,
-    ):
+    session: AsyncSession,
+):
     # stmt = select(User).options(joinedload(User.posts)).order_by(User.id)
-    stmt = select(User).options(joinedload(User.profile), 
-                                selectinload(User.posts)).order_by(User.id)
+    stmt = (
+        select(User)
+        .options(joinedload(User.profile), selectinload(User.posts))
+        .order_by(User.id)
+    )
     # users = await session.scalars(stmt)
     # result: Result = await session.execute(stmt)
     # users = result.unique().scalars()
@@ -97,7 +97,7 @@ async def get_users_with_posts_and_profiles(
     # for user in users.unique():
     users = await session.scalars(stmt)
     for user in users:
-        print("**"*10)
+        print("**" * 10)
         print(user, user.profile and user.profile.first_name)
         for post in user.posts:
             print("-", post)
@@ -130,9 +130,9 @@ async def main_relations(session: AsyncSession):
 
 
 async def create_order(
-        session: AsyncSession,
-        promocode: str | None = None,
-    )-> Order:
+    session: AsyncSession,
+    promocode: str | None = None,
+) -> Order:
     order = Order(promocode=promocode)
     session.add(order)
     await session.commit()
@@ -140,10 +140,10 @@ async def create_order(
 
 
 async def create_product(
-        session: AsyncSession,
-        name: str,
-        description: str,
-        price: int, 
+    session: AsyncSession,
+    name: str,
+    description: str,
+    price: int,
 ) -> Product:
     product = Product(
         name=name,
@@ -152,31 +152,50 @@ async def create_product(
     )
     session.add(product)
     await session.commit()
-    return product 
+    return product
 
- 
-async def demo_m2m(session: AsyncSession):
+
+async def create_orders_and_products(session: AsyncSession):
     order_one = await create_order(session)
     order_promo = await create_order(session, promocode="promo")
 
     mouse = await create_product(
-        session, 
-        name="Mouse", 
-        description="Greate gaming mouse", 
-        price=123
-        )
+        session, name="Mouse", description="Greate gaming mouse", price=123
+    )
     keyboard = await create_product(
-        session, 
-        name="Keyboard", 
-        description="Greate gaming keyboard", 
-        price=149
-        )
+        session, name="Keyboard", description="Greate gaming keyboard", price=149
+    )
     display = await create_product(
-        session, 
-        name="Display", 
-        description="Office display", 
-        price=299
-        )
+        session, name="Display", description="Office display", price=299
+    )
+    order_one = await session.scalar(
+        select(Order)
+        .where(Order.id == order_one.id)
+        .options(selectinload(Order.products))
+    )
+
+    order_promo = await session.scalar(
+        select(Order)
+        .where(Order.id == order_promo.id)
+        .options(selectinload(Order.products))
+    )
+
+    order_one.products.append(mouse)
+    order_one.products.append(keyboard)
+    order_promo.products.append(keyboard)
+    order_promo.products.append(display)
+
+    await session.commit()
+
+async def get_orders_with_products(session: AsyncSession) -> list[Order]:
+    stmt = select(Order).options(selectinload(Order.products)).order_by(Order.id)
+    orders = await session.scalars(stmt)
+    return list(orders)
+
+
+async def demo_m2m(session: AsyncSession):
+   get_orders_with_products
+
 
 async def main():
     async with db_helper.session_factory() as session:
@@ -203,19 +222,18 @@ async def main():
         #     session,
         #     user_john.id,
         #     "SQLA 2.0",
-        #     "SQLA Joins", 
+        #     "SQLA Joins",
         #     )
         # await create_posts(
         #     session,
         #     user_sam.id,
         #     "FastAPI intro",
-        #     "FastAPI Advanced", 
-        #     "FastAPI more", 
+        #     "FastAPI Advanced",
+        #     "FastAPI more",
         #     )
         # await get_users_with_posts(session=session)
         # await get_posts_with(session=session)
         # await get_profiles_with_users_and_users_with_posts(session=session)
-        
 
 
 if __name__ == "__main__":
