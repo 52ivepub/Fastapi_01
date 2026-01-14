@@ -194,7 +194,12 @@ async def get_orders_with_products(session: AsyncSession) -> list[Order]:
 
 
 async def demo_m2m(session: AsyncSession):
-   get_orders_with_products
+    orders = await get_orders_with_products(session)
+    for order in orders:
+        print(order.id, order.promocode, order.created_at, "products:")
+        for product in order.products:
+            print("--", product.id, product.name, product.price)
+
 
 
 async def main():
