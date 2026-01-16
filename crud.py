@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Result, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
-from core.models import db_helper, User, Profile, Post, user, Order, Product
+from core.models import db_helper, User, Profile, Post, user, Order, Product, OrderProductAssociation
 
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ async def create_user(session: AsyncSession, username: str) -> User:
     return user
 
 
-async def get_user_by_username(session: AsyncSession, username: str) -> User | None:
+async def get_user_by_username(session: AsyncSession, username: str) -> User:
     stmt = select(User).where(User.username == username)
     # result: Result = await session.execute(stmt)
     # user: User | None = result.scalar_one_or_none()
@@ -187,30 +187,57 @@ async def create_orders_and_products(session: AsyncSession):
 
     await session.commit()
 
-async def get_orders_with_products(session: AsyncSession) -> list[Order]:
-    stmt = select(Order).options(selectinload(Order.products)).order_by(Order.id)
+
+async def get_orders_with_products_assoc(session: AsyncSession) -> list[Order]:
+    stmt = (
+        select(Order)
+        .options(
+            selectinload(Order.products_details).joinedload(OrderProductAssociation.product),
+            )
+            .order_by(Order.id)
+    )
     orders = await session.scalars(stmt)
     return list(orders)
 
 
 async def demo_m2m(session: AsyncSession):
-    orders = await get_orders_with_products(session)
+    # await demo_get_orders_with_product_through_secondary(session)
+    await demo_get_orders_with_product_with_assoc(session)
+
+
+async def demo_get_orders_with_product_with_assoc(session: AsyncSession):
+    orders = await get_orders_with_products_assoc(session)
     for order in orders:
         print(order.id, order.promocode, order.created_at, "products:")
-        for product in order.products:
-            print("--", product.id, product.name, product.price)
+        for order_product_details in order.products_details:
+            print("-- ", 
+                  order_product_details.product.id, 
+                  order_product_details.product.name, 
+                  order_product_details.product.price,
+                  "qty: ",
+                  order_product_details.count,
+                  )
 
+
+
+# async def demo_get_orders_with_product_through_secondary(session: AsyncSession):
+#     orders = await get_orders_with_products(session)
+#     for order in orders:
+#         print(order.id, order.promocode, order.created_at, "products:")
+#         for product in order.products:
+#             print("--", product.id, product.name, product.price)
 
 
 async def main():
     async with db_helper.session_factory() as session:
+
         # await main_relations(session=session)
         await demo_m2m(session=session)
         # await create_user(session=session, username="john")
         # await create_user(session=session, username="alice")
         # user_sam = await get_user_by_username(session=session, username="sam")
         # user_john = await get_user_by_username(session=session, username="john")
-        # # user_bob = await get_user_by_username(session=session, username="bob")
+        # user_bob = await get_user_by_username(session=session, username="bob")
         # await create_user_profile(
         #     session=session,
         #     user_id=user_john.id,
