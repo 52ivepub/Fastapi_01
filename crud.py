@@ -200,10 +200,21 @@ async def get_orders_with_products_assoc(session: AsyncSession) -> list[Order]:
     return list(orders)
 
 
-async def demo_m2m(session: AsyncSession):
-    # await demo_get_orders_with_product_through_secondary(session)
+async def create_gift_product_for_existing_orders(session: AsyncSession):
     orders = await get_orders_with_products_assoc(session)
-    
+    gift_product = await create_product(
+        session,
+        name="Gift",
+        description="Gidt for your",
+        price=0,
+    )
+    for order in orders:
+        order.products_details.append(OrderProductAssociation(
+            count=1,
+            unit_price=0,
+            product=gift_product,
+        ))
+    await session.commit()
 
 
 async def demo_get_orders_with_product_with_assoc(session: AsyncSession):
@@ -218,6 +229,15 @@ async def demo_get_orders_with_product_with_assoc(session: AsyncSession):
                   "qty: ",
                   order_product_details.count,
                   )
+            
+
+async def demo_m2m(session: AsyncSession):
+    await demo_get_orders_with_product_with_assoc(session)
+    # await create_gift_product_for_existing_orders(session)
+
+
+
+
 
 
 
