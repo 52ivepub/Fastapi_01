@@ -202,7 +202,8 @@ async def get_orders_with_products_assoc(session: AsyncSession) -> list[Order]:
 
 async def demo_m2m(session: AsyncSession):
     # await demo_get_orders_with_product_through_secondary(session)
-    await demo_get_orders_with_product_with_assoc(session)
+    orders = await get_orders_with_products_assoc(session)
+    
 
 
 async def demo_get_orders_with_product_with_assoc(session: AsyncSession):
