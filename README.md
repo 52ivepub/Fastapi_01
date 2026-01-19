@@ -9,3 +9,5 @@ alembic revision --autogenerate -m "Create products table" (create migrations)
 alembic upgrade head  (install migrations)
 
 alembic downgrade -1 (cancell migrations)
+
+python -c 'import secrets; print(secrets.token_hex())'  -- сгенерировать случайный токен 
