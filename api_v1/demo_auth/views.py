@@ -2,7 +2,7 @@ import secrets
 import time
 from typing import Annotated, Any
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, Header, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Header, Response, status
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
 from requests import status_codes
 
@@ -99,20 +99,25 @@ def generate_session_id():
 
 
 def get_session_data(
-        
+    session_id: str = Cookie(alias=COOKIE_SESSION_ID_KEY),
 ):
-    pass
+    if session_id not in COOKIES:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="not authenticated"
+        )
+    return COOKIES[session_id]
 
 
 @router.post("/login-cookie/")
 def demo_auth_login_cookie(
     response: Response,
-    auth_username: str = Depends(get_auth_user_username), 
-    # username: str = Depends(get_username_by_static_auth_token), 
+    # auth_username: str = Depends(get_auth_user_username), 
+    username: str = Depends(get_username_by_static_auth_token), 
 ):
     session_id = generate_session_id()
     COOKIES[session_id] = {
-        "username": auth_username,
+        "username": username,
         "login_at": int(time.time())
     }
     response.set_cookie(COOKIE_SESSION_ID_KEY, session_id)
@@ -120,6 +125,27 @@ def demo_auth_login_cookie(
     
 
 @router.get("/check-cookie")
-def demo_auth_check_cookie():
-    pass
+def demo_auth_check_cookie(
+    user_session_data: dict = Depends(get_session_data),
+):
+    username = user_session_data["username"]
+    return {
+        "message": f"Hello {username}",
+        **user_session_data
+    }
+
+
+@router.get("/logout-cookie")
+def demo_logout_check_cookie(
+    respone: Response,
+    session_id: str = Cookie(alias=COOKIE_SESSION_ID_KEY),
+    user_session_data: dict = Depends(get_session_data),
+):
+    COOKIES.pop(session_id,)
+    respone.delete_cookie(COOKIE_SESSION_ID_KEY)
+    username = user_session_data["username"]
+    return {
+        "message": f"Bye {username}",
+        
+    }
 
