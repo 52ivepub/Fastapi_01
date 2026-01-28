@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 import bcrypt
 import jwt
 from core.config import settings
@@ -6,7 +7,7 @@ from core.config import settings
 
 def encode_jwt(
     payload: dict,
-    private_key=settings.auth_jwt.private_key_path.read_text(),
+    private_key: Path = open(settings.auth_jwt.private_key_path, "r").read(),
     algorithm=settings.auth_jwt.algorithm,
     expire_minutes: int = settings.auth_jwt.access_token_expire_minutes,
     expire_timedelta: timedelta | None = None, 
@@ -17,7 +18,7 @@ def encode_jwt(
         expire = now + expire_timedelta
     else: 
         expire = now + timedelta(minutes=expire_minutes)
-    to_encode.update(exp=expire)
+    to_encode.update(exp=expire, iat=now)
     encoded = jwt.encode(
         to_encode,
         private_key,
@@ -28,7 +29,7 @@ def encode_jwt(
 
 def decode_jwt(
     token: str | bytes,
-    public_key=settings.auth_jwt.public_key_path.read_text(),
+    public_key: Path = open(settings.auth_jwt.public_key_path, "r").read(),
     algorithm=settings.auth_jwt.algorithm,
 ):
     decoded = jwt.decode(token, public_key, algorithms=[algorithm])
@@ -47,4 +48,4 @@ def validate_password(
     password: str,
     hashed_password: bytes,
 ) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed_password=hash_password)
+    return bcrypt.checkpw(password.encode(), hashed_password=hashed_password)
