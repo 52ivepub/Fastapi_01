@@ -1,3 +1,6 @@
+import token
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
+from jwt import InvalidTokenError
 from pydantic import BaseModel
 from auth import utils as auth_utils
 from users.schemas import UserSchema
@@ -6,8 +9,11 @@ from fastapi import (
     Depends,
     Form,
     HTTPException,
-    status
+    status,
 )
+
+# http_bearer = HTTPBearer()
+uauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/demo-auth/jwt/login/")
 
 class TokenInfo(BaseModel):
     access_token: str
@@ -54,6 +60,49 @@ def validate_auth_user(
         )
     return user
     
+
+def get_current_token_payload(
+    # credentials: HTTPAuthorizationCredentials = Depends(uauth2_scheme),
+    token: str = Depends(uauth2_scheme),
+) -> UserSchema:
+    # token = credentials.credentials
+    try:
+        payload = auth_utils.decode_jwt(
+        token=token,
+        )
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"invalid token erorr {e}"
+        )
+        
+    return payload
+
+
+def get_current_auth_user(
+    payload: dict = Depends(get_current_token_payload),
+) -> UserSchema:
+    username: str| None = payload.get("sub")
+    if user:= user_db.get(username):
+        return user
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="token invalid (user not found)",
+        )
+    
+
+
+
+def get_current_active_auth_user(
+    user: UserSchema = Depends(get_current_auth_user),
+):
+    if user.active:
+        return user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="user inactive"
+    )
+
     
 
 @router.post("/login/", response_model=TokenInfo)
@@ -71,3 +120,15 @@ def auth_user_issue_jwt(
         token_type="Bearer"
     )
 
+
+@router.get("/users/me/")
+def auth_user_check_self_info(
+    payload: dict = Depends(get_current_token_payload),
+    user: UserSchema = Depends(get_current_active_auth_user),
+):
+    iat = payload.get("iat")
+    return {
+        "username": user.username,
+        "email": user.email,
+        "logged_in_at": iat,
+    }
