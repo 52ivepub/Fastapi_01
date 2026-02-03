@@ -11,13 +11,14 @@ from fastapi import (
     HTTPException,
     status,
 )
-
+from api_v1.demo_auth.helpers import create_access_token, create_refresh_token, create_token
 # http_bearer = HTTPBearer()
 uauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/demo-auth/jwt/login/")
 
 class TokenInfo(BaseModel):
     access_token: str
-    token_type: str
+    refresh_token: str
+    token_type: str = "Bearer"
 
 router = APIRouter(prefix="/jwt", tags=["JWT"])
 
@@ -103,16 +104,6 @@ def get_current_active_auth_user(
         detail="user inactive"
     )
 
-    
-
-def create_access_token(user: UserSchema) -> str:
-    jwt_payload = {
-        "sub": user.username,
-        "username": user.username,
-        "email": user.email,
-    }
-    return auth_utils.encode_jwt(jwt_payload)
-
 
 
 @router.post("/login/", response_model=TokenInfo)
@@ -120,10 +111,10 @@ def auth_user_issue_jwt(
     user: UserSchema = Depends(validate_auth_user),
 ):
     access_token = create_access_token(user)
-    refresh_token = ...
+    refresh_token = create_refresh_token(user)
     return TokenInfo(
         access_token=access_token,
-        token_type="Bearer"
+        refresh_token=refresh_token,
     )
 
 
