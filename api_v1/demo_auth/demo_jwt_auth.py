@@ -105,18 +105,24 @@ def get_current_active_auth_user(
 
     
 
-@router.post("/login/", response_model=TokenInfo)
-def auth_user_issue_jwt(
-    user: UserSchema = Depends(validate_auth_user),
-):
+def create_access_token(user: UserSchema) -> str:
     jwt_payload = {
         "sub": user.username,
         "username": user.username,
         "email": user.email,
     }
-    token = auth_utils.encode_jwt(jwt_payload)
+    return auth_utils.encode_jwt(jwt_payload)
+
+
+
+@router.post("/login/", response_model=TokenInfo)
+def auth_user_issue_jwt(
+    user: UserSchema = Depends(validate_auth_user),
+):
+    access_token = create_access_token(user)
+    refresh_token = ...
     return TokenInfo(
-        access_token=token,
+        access_token=access_token,
         token_type="Bearer"
     )
 
