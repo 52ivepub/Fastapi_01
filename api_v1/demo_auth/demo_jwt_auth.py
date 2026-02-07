@@ -1,5 +1,9 @@
 import token
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+    OAuth2PasswordBearer,
+)
 from jwt import InvalidTokenError
 from pydantic import BaseModel
 from auth import utils as auth_utils
@@ -11,14 +15,21 @@ from fastapi import (
     HTTPException,
     status,
 )
-from api_v1.demo_auth.helpers import create_access_token, create_refresh_token, create_token
-# http_bearer = HTTPBearer()
+from api_v1.demo_auth.helpers import (
+    create_access_token,
+    create_refresh_token,
+    create_jwt,
+)
+
+http_bearer = HTTPBearer()
 uauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/demo-auth/jwt/login/")
+
 
 class TokenInfo(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "Bearer"
+
 
 router = APIRouter(prefix="/jwt", tags=["JWT"])
 
@@ -35,23 +46,24 @@ sam = UserSchema(
 
 user_db: dict[str, UserSchema] = {
     john.username: john,
-    sam.username: sam, 
+    sam.username: sam,
 }
 
+
 def validate_auth_user(
-        username: str = Form(),
-        password: str = Form(),
+    username: str = Form(),
+    password: str = Form(),
 ):
     unauthed_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="invalid username or password",
-        )
+    )
     if not (user := user_db.get(username)):
-          raise unauthed_exc
+        raise unauthed_exc
 
     if not auth_utils.validate_password(
-         password=password,
-         hashed_password=user.password,
+        password=password,
+        hashed_password=user.password,
     ):
         raise unauthed_exc
     if not user.active:
@@ -60,7 +72,7 @@ def validate_auth_user(
             detail="user inactive",
         )
     return user
-    
+
 
 def get_current_token_payload(
     # credentials: HTTPAuthorizationCredentials = Depends(uauth2_scheme),
@@ -69,29 +81,26 @@ def get_current_token_payload(
     # token = credentials.credentials
     try:
         payload = auth_utils.decode_jwt(
-        token=token,
+            token=token,
         )
     except InvalidTokenError as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"invalid token erorr {e}"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"invalid token erorr {e}"
         )
-        
+
     return payload
 
 
 def get_current_auth_user(
     payload: dict = Depends(get_current_token_payload),
 ) -> UserSchema:
-    username: str| None = payload.get("sub")
-    if user:= user_db.get(username):
+    username: str | None = payload.get("sub")
+    if user := user_db.get(username):
         return user
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="token invalid (user not found)",
-        )
-    
-
+    )
 
 
 def get_current_active_auth_user(
@@ -99,11 +108,7 @@ def get_current_active_auth_user(
 ):
     if user.active:
         return user
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="user inactive"
-    )
-
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user inactive")
 
 
 @router.post("/login/", response_model=TokenInfo)

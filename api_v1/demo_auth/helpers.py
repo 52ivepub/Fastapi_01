@@ -31,7 +31,7 @@ def create_access_token(user: UserSchema) -> str:
         "email": user.email,
     }
     return create_jwt(
-        token=ACCESS_TOKEN_TYPE,
+        token_type=ACCESS_TOKEN_TYPE,
         token_data=jwt_payload,
         expire_minutes=settings.auth_jwt.access_token_expire_minutes,
     )
@@ -42,7 +42,7 @@ def create_refresh_token(user: UserSchema) -> str:
         "sub": user.username,
     }
     return create_jwt(
-        token=REFRESH_TOKEN_TYPE,
+        token_type=REFRESH_TOKEN_TYPE,
         token_data=jwt_payload,
         expire_timedelta=timedelta(days=settings.auth_jwt.refresh_token_expire_days),
     )
